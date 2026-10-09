@@ -1,0 +1,16 @@
+# App de teste local: aponta para o DeepSeek no lugar de um agente do Databricks.
+# NÃO levar para a máquina da empresa (lá o endpoint é o agente real e system_prompt não existe).
+app_id: demo
+name: Demo local
+enabled: true
+endpoint: deepseek-chat
+input_kind: text
+input_required: false
+max_input_chars: 500
+rate_limit_per_min: 30
+max_tokens: 100
+fields:
+  cpf:     { type: cpf }
+  assunto: { type: enum, values: [consorcio, financas, outros] }
+  urgente: { type: bool }
+system_prompt: Você recebe um JSON com app, user, prompt, input e fields. Responda em uma frase curta, em português.

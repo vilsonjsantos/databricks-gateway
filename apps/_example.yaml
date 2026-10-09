@@ -1,0 +1,25 @@
+# Modelo de app. Arquivos que começam com '_' são ignorados pelo gateway.
+# Copie para apps/<app_id>.yaml. Documentação dos campos: docs/CONFIGURACAO.md (seção 3).
+app_id: assistente-operadores          # mesmo valor que o Code.gs coloca no campo "app" do token
+name: Assistente dos operadores
+enabled: true
+endpoint: agente-atendimento           # nome do serving endpoint do AGENTE no Databricks
+input_kind: text                       # tipo do texto principal: text | cpf | protocolo ...
+input_required: true
+max_input_chars: 2000
+max_prompt_chars: 4000
+rate_limit_per_min: 60
+max_concurrent: 8                      # atendimentos simultâneos deste app (acima: 429 + Retry-After)
+conversation:                          # histórico de conversa guardado DENTRO do Databricks (ver docs/ARQUITETURA_AGENTE.md)
+  enabled: false
+  max_turns: 6
+# max_tokens: 500                      # opcional; vazio = padrão do agente
+
+# Um item por campo do formulário do Apps Script. Campo que não está aqui é REJEITADO (422).
+# type: text | cpf | protocolo | enum | int | bool | date (AAAA-MM-DD)
+fields:
+  cpf:        { type: cpf, required: true }
+  protocolo:  { type: protocolo }
+  assunto:    { type: enum, values: [consorcio, financas, outros] }
+  urgente:    { type: bool }
+  observacao: { type: text, max_len: 1000 }

@@ -1,0 +1,30 @@
+/* ============================================================================================================
+   TEMA DO PAINEL EXECUTIVO  —  é o ÚNICO arquivo a editar para aplicar a identidade visual da empresa.
+   ATENÇÃO (para o Claude/designer da empresa): os valores abaixo são uma APROXIMAÇÃO GENÉRICA em azul, NÃO a paleta oficial.
+   A paleta oficial da empresa não foi usada. Troque cada variável pelos valores do manual de marca e
+   coloque o logo em dashboard/logo.svg (ou logo.png): o painel o exibe sozinho no cabeçalho.
+   Variantes: html[data-tema="claro"] (padrão) e html[data-tema="escuro"] (TV em sala escura). ?tema=escuro na URL.
+   Contraste: texto sobre --band e sobre --panel deve ter razão >= 4,5:1; barras/linhas >= 3:1.
+   ============================================================================================================ */
+:root, :root[data-tema="claro"] {
+  --bg: #eef2f8;          /* fundo da página */
+  --panel: #ffffff;       /* cartões */
+  --line: #d9e1ee;        /* bordas e trilhos */
+  --ink: #0b1f3a;         /* texto principal */
+  --mute: #55657f;        /* texto secundário */
+  --band: #00428c;        /* faixa do cabeçalho (cor principal da marca) */
+  --band-ink: #ffffff;    /* texto sobre a faixa */
+  --acc: #0080c6;         /* barras/gráficos (azul claro da marca) */
+  --acc-soft: #bcd7ee;    /* barras futuras / trilho preenchido suave */
+  --now: #00428c;         /* destaque do período atual */
+  --ok: #08813a;          /* sucesso */
+  --warn: #a85f00;        /* atenção (escuro o bastante para ler sobre branco) */
+  --bad: #c8001a;         /* falha */
+  --font: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+:root[data-tema="escuro"] {
+  color-scheme: dark;  /* barras de rolagem e controles nativos escuros */
+  --bg: #06152b; --panel: #0c2342; --line: #1c3a68; --ink: #f2f6fc; --mute: #9db1cf;
+  --band: #00306a; --band-ink: #ffffff; --acc: #3fa0e6; --acc-soft: #1d4a7d; --now: #7cc4ff;
+  --ok: #35c98e; --warn: #f2b04a; --bad: #ff7b7b;
+}

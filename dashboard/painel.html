@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="pt-BR" data-tema="claro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel do Assistente</title>
+<link rel="stylesheet" href="/painel/tema.css">
+<style>
+  * { box-sizing:border-box; margin:0; }
+  html, body { height:100%; }
+  /* flex (e não grid) para que o aviso de instabilidade, quando escondido, não desloque as linhas do layout */
+  body { background:var(--bg); color:var(--ink); font-family:var(--font); overflow:hidden; display:flex; flex-direction:column; }
+  .faixa, #alerta { flex:none; }
+
+  /* ---- faixa do cabeçalho (cor da marca) ---- */
+  .faixa { background:var(--band); color:var(--band-ink); display:flex; align-items:center; justify-content:space-between; gap:16px;
+           padding:clamp(8px,1.4vh,18px) clamp(14px,2.4vw,40px); }
+  .marca { display:flex; align-items:center; gap:clamp(10px,1.4vw,22px); min-width:0; }
+  #logo { height:clamp(26px,4.4vh,52px); display:none; }
+  h1 { font-size:clamp(18px,2.4vw,38px); font-weight:650; letter-spacing:-.01em; line-height:1.1; }
+  h1 small { display:block; font-size:clamp(11px,1.15vw,18px); font-weight:400; opacity:.85; letter-spacing:0; margin-top:3px; }
+  #demo { display:none; margin-left:.8em; padding:.1em .7em; border:1px solid currentColor; border-radius:99px; font-weight:600; font-size:.85em; text-transform:none; }
+  .dir { display:flex; align-items:center; gap:clamp(10px,1.6vw,26px); }
+  .status { display:flex; align-items:center; gap:.6em; padding:.45em 1em; border-radius:99px; background:rgba(255,255,255,.14);
+            border:1px solid rgba(255,255,255,.35); font-size:clamp(12px,1.3vw,21px); font-weight:600; }
+  .dot { width:.7em; height:.7em; border-radius:50%; background:#5ee0a0; animation:pulso 2.4s infinite; }
+  .status[data-n="atencao"] .dot { background:#ffc861; } .status[data-n="fora"] .dot { background:#ff8a8a; }
+  .status[data-n="semconexao"] .dot { background:#c3cbd8; animation:none; }
+  @keyframes pulso { 0% { box-shadow:0 0 0 0 rgba(255,255,255,.55); } 70%,100% { box-shadow:0 0 0 .6em rgba(255,255,255,0); } }
+  @media (prefers-reduced-motion:reduce) { .dot { animation:none; } }
+  #relogio { font-size:clamp(20px,2.4vw,38px); font-variant-numeric:tabular-nums; font-weight:300; }
+
+  /* ---- corpo: UMA página, sem rolagem; só os blocos listados rolam por dentro ---- */
+  .tela { flex:1; min-height:0; display:grid; grid-template-rows:auto minmax(0,1.15fr) minmax(0,1fr) auto; gap:clamp(8px,1.4vh,16px);
+          padding:clamp(8px,1.6vh,22px) clamp(14px,2.4vw,40px) clamp(6px,1.2vh,14px); }
+  #alerta { display:none; padding:.55em clamp(14px,2.4vw,40px); font-size:clamp(13px,1.4vw,22px); font-weight:600; color:#fff; text-align:center; }
+  #alerta.atencao { display:block; background:var(--warn); } #alerta.fora { display:block; background:var(--bad); }
+  .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(8px,1.2vw,18px); }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:clamp(8px,1.5vh,20px) clamp(12px,1.3vw,22px);
+          min-height:0; min-width:0; display:flex; flex-direction:column; box-shadow:0 1px 2px rgba(0,30,70,.06); }
+  .rot { color:var(--mute); font-size:clamp(11px,1.1vw,17px); font-weight:600; letter-spacing:.01em; }
+  .num { font-size:clamp(28px,4.8vw,78px); font-weight:650; line-height:1.05; font-variant-numeric:tabular-nums; margin-top:.1em; color:var(--ink); }
+  .num span { font-size:.42em; font-weight:500; color:var(--mute); margin-left:.15em; }
+  .num.ok { color:var(--ok); } .num.warn { color:var(--warn); } .num.bad { color:var(--bad); }
+  .sub { color:var(--mute); font-size:clamp(10px,1vw,16px); margin-top:auto; padding-top:.35em; line-height:1.35; }
+  .sub b { color:var(--ink); font-weight:600; } .sub .meta { white-space:nowrap; }
+  .meio { display:grid; grid-template-columns:1.7fr 1fr; gap:clamp(8px,1.2vw,18px); min-height:0; }
+  .baixo { display:grid; grid-template-columns:1fr 1fr; gap:clamp(8px,1.2vw,18px); min-height:0; }
+  /* gráficos: rolam na horizontal se não couberem */
+  .grafico { flex:1; min-height:0; margin-top:.3em; overflow-x:auto; overflow-y:hidden; scrollbar-width:thin; }
+  .grafico svg { display:block; }
+  .grafico text { fill:var(--mute); font-family:var(--font); }
+  .grafico text.agora { fill:var(--now); font-weight:700; }  /* hora/dia atual em destaque */
+  .bar { fill:var(--acc); } .bar.fut { fill:var(--acc-soft); } .bar.now { fill:var(--now); }
+  /* listas: rolam na vertical (e rolam sozinhas, devagar, na tela fixa) */
+  .lista { flex:1; min-height:0; overflow-y:auto; margin-top:.4em; scrollbar-width:thin; display:flex; flex-direction:column; }
+  .itens { margin:auto 0; display:flex; flex-direction:column; gap:clamp(4px,.9vh,10px); padding-right:4px; }
+  .lin { display:grid; grid-template-columns:minmax(0,1.5fr) 2fr 5.4em; align-items:center; gap:.8em; font-size:clamp(11px,min(1.3vw,2.5vh),21px); }
+  .lin .nome { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .trilho { height:.75em; background:var(--line); border-radius:99px; overflow:hidden; }
+  .trilho i { display:block; height:100%; background:var(--acc); border-radius:99px; transition:width .6s; }
+  .lin .val { font-variant-numeric:tabular-nums; font-weight:650; text-align:right; } .lin .val small { color:var(--mute); font-weight:400; }
+  .vazio { color:var(--mute); font-size:clamp(11px,1.15vw,18px); margin:auto; text-align:center; max-width:30em; }
+  footer { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; color:var(--mute); font-size:clamp(10px,1vw,16px); }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+  #aviso { display:none; font-size:clamp(11px,1.05vw,16px); background:rgba(255,255,255,.18); border-radius:8px; padding:.25em .7em; }
+
+  /* telas pequenas (celular/janela estreita): aí a página inteira pode rolar */
+  @media (max-width:900px) { body { overflow:auto; display:block; } .tela { display:flex; flex-direction:column; }
+    .kpis,.meio,.baixo { grid-template-columns:1fr 1fr; } .meio>.card:first-child { grid-column:1/-1; }
+    .grafico { min-height:150px; } .lista { min-height:140px; } }
+  @media (max-width:560px) { .kpis,.meio,.baixo { grid-template-columns:1fr; } .dir { flex-wrap:wrap; justify-content:flex-end; } }
+</style>
+</head>
+<body>
+<header class="faixa">
+  <div class="marca">
+    <img id="logo" src="/painel/logo" alt="" onload="this.style.display='block'" onerror="this.remove()">
+    <h1><span id="titulo">Assistente de Atendimento</span><small><span id="data">&nbsp;</span><span id="demo">DADOS DE DEMONSTRAÇÃO</span></small></h1>
+  </div>
+  <div class="dir">
+    <div id="aviso" role="status"></div>
+    <div class="status" id="status" data-n="semconexao" aria-live="polite"><i class="dot"></i><span id="statusTxt">Conectando…</span></div>
+    <div id="relogio">--:--</div>
+  </div>
+</header>
+
+<div id="alerta" role="alert"></div>
+
+<main class="tela">
+  <section class="kpis">
+    <div class="card"><div class="rot">Atendimentos hoje</div><div class="num" id="kTotal">–</div><div class="sub" id="kTotalSub">&nbsp;</div></div>
+    <div class="card"><div class="rot">Respostas com sucesso</div><div class="num" id="kOk">–</div><div class="sub" id="kOkSub">&nbsp;</div></div>
+    <div class="card"><div class="rot">Tempo de resposta</div><div class="num" id="kTempo">–</div><div class="sub" id="kTempoSub">&nbsp;</div></div>
+    <div class="card"><div class="rot">Pessoas atendidas hoje</div><div class="num" id="kPessoas">–</div><div class="sub" id="kPessoasSub">operadores diferentes</div></div>
+  </section>
+
+  <section class="meio">
+    <div class="card"><div class="rot">Atendimentos por hora — hoje</div><div class="grafico" id="gHoras" role="img" aria-label="Atendimentos por hora"></div></div>
+    <div class="card"><div class="rot">Últimos 7 dias</div><div class="grafico" id="gDias" role="img" aria-label="Atendimentos por dia"></div></div>
+  </section>
+
+  <section class="baixo">
+    <div class="card"><div class="rot">Por aplicação — hoje</div><div class="lista" id="lApps"></div></div>
+    <div class="card"><div class="rot">Assuntos mais consultados — hoje</div><div class="lista" id="lAssuntos"></div></div>
+  </section>
+
+  <footer><span id="rodape">&nbsp;</span><span id="atualizado">&nbsp;</span></footer>
+</main>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const nf = n => (n ?? 0).toLocaleString('pt-BR');
+  const dec = n => String(n).replace('.', ',');
+  const hh = n => String(n).padStart(2, '0') + 'h';
+  const hora = ts => new Date(ts).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  const params = new URLSearchParams(location.search);
+  document.documentElement.dataset.tema = params.get('tema') === 'escuro' ? 'escuro' : 'claro';
+  let key = params.get('k') || ''; try { if (key) localStorage.setItem('painelKey', key); else key = localStorage.getItem('painelKey') || ''; } catch (e) {}
+  let ultimo = null, ultimoOk = 0;
+
+  function relogio() {
+    const d = new Date();
+    $('relogio').textContent = hora(d);
+    const dia = d.toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long'});
+    $('data').textContent = dia.charAt(0).toUpperCase() + dia.slice(1);
+  }
+  relogio(); setInterval(relogio, 1000);
+
+  // ---- gráfico de barras em pixels reais (texto nítido, rola na horizontal se faltar espaço) ----
+  function barras(box, valores, rotulos, destaque, futuros, larguraMin) {
+    const H = box.clientHeight, W = Math.max(box.clientWidth, valores.length * larguraMin);
+    if (H < 40) return;
+    const fs = Math.max(11, Math.min(17, H / 11)), base = H - fs * 1.9, topo = fs * 1.9;
+    const max = Math.max(1, ...valores), passo = W / valores.length, larg = Math.min(passo * 0.68, 64);
+    let s = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><line x1="0" x2="${W}" y1="${base}" y2="${base}" stroke="var(--line)"/>`;
+    valores.forEach((v, i) => {
+      const h = Math.max(v ? 3 : 0, (v / max) * (base - topo)), x = i * passo + (passo - larg) / 2;
+      const cls = i === destaque ? 'bar now' : (futuros && i > destaque ? 'bar fut' : 'bar');
+      s += `<rect class="${cls}" x="${x.toFixed(1)}" y="${(base - h).toFixed(1)}" width="${larg.toFixed(1)}" height="${h.toFixed(1)}" rx="3"/>`;
+      if (v) s += `<text x="${(x + larg / 2).toFixed(1)}" y="${(base - h - 5).toFixed(1)}" text-anchor="middle" font-size="${fs}">${nf(v)}</text>`;
+      if (rotulos[i]) s += `<text class="${i === destaque ? 'agora' : ''}" x="${(x + larg / 2).toFixed(1)}" y="${H - fs * .5}" text-anchor="middle" font-size="${fs}">${esc(rotulos[i])}</text>`;
+    });
+    box.innerHTML = s + '</svg>';
+    const atual = box.querySelector('.now'); if (atual && W > box.clientWidth) atual.scrollIntoView({inline:'center', block:'nearest'});
+  }
+
+  function faixaDeHoras(d) {  // mostra o expediente (07h-19h no mínimo), não as 24h com metade vazia
+    const ativas = d.hours.map((n, i) => n ? i : -1).filter(i => i >= 0);
+    const de = Math.min(7, ativas.length ? ativas[0] : 7, d.current_hour);
+    const ate = Math.min(23, Math.max(19, ativas.length ? ativas[ativas.length - 1] : 19, d.current_hour));
+    return [de, ate];
+  }
+
+  function lista(el, itens, vazio, extra) {
+    if (!itens.length) { el.innerHTML = `<div class="vazio">${vazio}</div>`; return; }
+    const max = Math.max(...itens.map(i => i.n));
+    el.innerHTML = '<div class="itens">' + itens.map(i => `<div class="lin"><span class="nome" title="${esc(i.name)}">${esc(i.name)}</span>
+      <span class="trilho"><i style="width:${Math.max(3, 100 * i.n / max)}%"></i></span><span class="val">${nf(i.n)}${extra(i)}</span></div>`).join('') + '</div>';
+  }
+
+  // ---- rolagem automática lenta das listas que não cabem (tela fixa, sem mouse); pausa com o mouse em cima ----
+  const estado = new WeakMap();
+  function rolar(t) {
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) document.querySelectorAll('.lista').forEach(el => {
+      if (el.scrollHeight <= el.clientHeight + 4 || el.matches(':hover')) return;
+      const s = estado.get(el) || {dir: 1, pausa: t + 4000, ult: t};
+      const dt = t - s.ult; s.ult = t;
+      if (t >= s.pausa) {
+        el.scrollTop += s.dir * dt * 0.022;  // ~22 px/s
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 1 || el.scrollTop <= 0) { s.dir *= -1; s.pausa = t + 4000; }
+      }
+      estado.set(el, s);
+    });
+    requestAnimationFrame(rolar);
+  }
+  requestAnimationFrame(rolar);
+
+  function desenhar(d) {
+    const t = d.today, alvo = d.targets || {};
+    $('titulo').textContent = d.title || 'Assistente de Atendimento';
+    document.title = d.title || 'Painel do Assistente';
+    $('demo').style.display = d.demo ? 'inline-block' : 'none';
+    // selo curto (uma palavra); a mensagem completa vai na faixa de alerta logo abaixo do cabeçalho
+    $('statusTxt').textContent = {ok: d.status.text, atencao: 'Atenção', fora: 'Fora do ar'}[d.status.level] || d.status.text;
+    $('status').dataset.n = d.status.level;
+    $('alerta').className = d.status.level === 'ok' ? '' : d.status.level; $('alerta').textContent = d.status.level === 'ok' ? '' : d.status.text;
+
+    $('kTotal').textContent = nf(t.total);
+    $('kTotalSub').innerHTML = (d.delta_pct === null ? 'sem comparação com ontem ainda'
+      : `<b>${d.delta_pct >= 0 ? '▲' : '▼'} ${Math.abs(d.delta_pct)}%</b> vs. ontem até este horário`) + ` · última hora: <b>${nf(d.last_hour)}</b>`;
+
+    const ok = $('kOk'), metaOk = alvo.success;
+    if (t.success_rate === null) { ok.textContent = '–'; ok.className = 'num'; $('kOkSub').textContent = 'aguardando o primeiro atendimento'; }
+    else {
+      ok.innerHTML = `${dec(t.success_rate)}<span>%</span>`; ok.className = 'num ' + (t.success_rate >= metaOk ? 'ok' : t.success_rate >= metaOk - 5 ? 'warn' : 'bad');
+      $('kOkSub').innerHTML = `<b>${nf(t.ok)}</b> de ${nf(t.total)} concluídos · <span class="meta">meta ≥ ${dec(metaOk)}% ${t.success_rate >= metaOk ? '<b class="ok">✓</b>' : '<b class="warn">!</b>'}</span>`;
+    }
+    const kt = $('kTempo');
+    kt.innerHTML = t.avg_s === null ? '–' : `${dec(t.avg_s)}<span>s</span>`;
+    kt.className = 'num' + (t.avg_s !== null && alvo.seconds ? (t.avg_s <= alvo.seconds ? ' ok' : ' warn') : '');
+    $('kTempoSub').innerHTML = t.p90_s === null ? 'média do envio até a resposta'
+      : `9 em cada 10 em até <b>${dec(t.p90_s)} s</b> · <span class="meta">meta ≤ ${dec(alvo.seconds)} s ${t.avg_s <= alvo.seconds ? '<b class="ok">✓</b>' : '<b class="warn">!</b>'}</span>`;
+    $('kPessoas').textContent = nf(t.people);
+    $('kPessoasSub').textContent = t.people === 1 ? 'operador diferente' : 'operadores diferentes';
+
+    redesenharGraficos(d);
+    lista($('lApps'), d.apps, 'Sem atendimentos hoje ainda', i => ` <small>${i.share}%</small>`);
+    lista($('lAssuntos'), d.topics, 'Os assuntos aparecem aqui assim que o assistente começar a informá-los', () => '');
+
+    const inc = d.incidents_today;
+    $('rodape').innerHTML = (inc ? `<span class="warn">${inc} ${inc === 1 ? 'instabilidade registrada' : 'instabilidades registradas'} hoje</span>`
+        + (d.last_incident ? ` · última às ${hora(d.last_incident.ts * 1000)}` : '') : '<span class="ok">Nenhuma instabilidade hoje</span>')
+      + (d.peak_hour !== null ? ` · horário de pico: ${hh(d.peak_hour)}` : '');
+  }
+
+  function redesenharGraficos(d) {
+    const [de, ate] = faixaDeHoras(d), idx = []; for (let i = de; i <= ate; i++) idx.push(i);
+    barras($('gHoras'), idx.map(i => d.hours[i]), idx.map(i => hh(i)), d.current_hour - de, true, 34);
+    barras($('gDias'), d.days.map(x => x.n), d.days.map(x => x.w), d.days.length - 1, false, 44);
+  }
+  new ResizeObserver(() => { if (ultimo) redesenharGraficos(ultimo); }).observe(document.body);
+
+  async function atualizar() {
+    try {
+      const r = await fetch('/painel/dados', { headers: { 'X-Admin-Key': key }, cache: 'no-store' });
+      if (r.status === 401 || r.status === 503) throw new Error(r.status === 401 ? 'chave de acesso inválida ou ausente (abra com ?k=...)' : 'painel desligado');
+      if (!r.ok) throw new Error('erro ' + r.status);
+      ultimo = await r.json(); ultimoOk = Date.now();
+      $('aviso').style.display = 'none'; desenhar(ultimo);
+      $('atualizado').textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR');
+    } catch (e) {
+      $('aviso').style.display = 'block';
+      $('aviso').textContent = 'Sem conexão — última leitura' + (ultimoOk ? ' às ' + hora(ultimoOk) : '') + (e instanceof TypeError ? '' : '. ' + (e.message || ''));
+      $('status').dataset.n = 'semconexao'; $('statusTxt').textContent = 'Sem conexão com o serviço';
+    }
+  }
+  atualizar(); setInterval(atualizar, 10000);
+  let ocioso; document.addEventListener('mousemove', () => { document.body.style.cursor = 'default'; clearTimeout(ocioso); ocioso = setTimeout(() => document.body.style.cursor = 'none', 5000); });
+</script>
+</body>
+</html>

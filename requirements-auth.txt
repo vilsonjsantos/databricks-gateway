@@ -1,0 +1,4 @@
+# Só necessário em AUTH_MODE=browser (máquina da empresa). Depois: python -m playwright install chromium
+# (com channel msedge/chrome não precisa baixar o Chromium: usa o navegador já instalado)
+databricks-sdk>=0.149
+playwright>=1.45

@@ -1,0 +1,9 @@
+# Roteamento determinístico: o valor de um campo do formulário aponta para um "domain" das skills.
+# É o sinal mais forte que existe (o operador escolheu na tela) e reduz os candidatos antes de qualquer busca.
+# O nome do campo tem que existir em fields: do apps/<app_id>.yaml. Se o filtro deixar menos de 2 candidatos, a busca
+# amplia para todas as skills (nunca trava o atendimento).
+field_domains:
+  assunto:
+    consorcio: consorcio
+    financas: financas
+candidates_k: 6      # quantos finalistas o LLM vê (4-8)

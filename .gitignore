@@ -1,0 +1,37 @@
+# ---- segredos e credenciais: NUNCA versionar ----
+.env
+.env.*
+!.env.example
+databricks-token.txt
+*token*.txt
+*.pem
+*.key
+*.pfx
+*.p12
+acessos/
+.auth/
+browser-profile/
+
+# ---- gerado em tempo de execução ----
+data/
+logs/
+dist/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.log
+
+# ---- python / ferramentas ----
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+
+# ---- configuração local de ferramentas de IA/IDE ----
+.claude/
+.vscode/
+.idea/

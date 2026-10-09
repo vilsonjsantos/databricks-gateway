@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Assistente</title>
+  <style>
+    body { font: 14px system-ui, sans-serif; max-width: 640px; margin: 16px auto; padding: 0 16px; }
+    label { display: block; margin: 10px 0 2px; font-weight: 600; }
+    input[type=text], select, textarea { width: 100%; padding: 6px; box-sizing: border-box; }
+    pre { white-space: pre-wrap; background: #f3f4f6; padding: 10px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <!-- EXEMPLO. Os nomes dos campos (cpf, assunto, urgente, observacao) têm que existir em fields: no apps/<app_id>.yaml -->
+  <label>CPF do cliente</label><input id="cpf" type="text" inputmode="numeric">
+  <label>Assunto</label>
+  <select id="assunto"><option value="">(não informado)</option><option>consorcio</option><option>financas</option><option>outros</option></select>
+  <label><input id="urgente" type="checkbox"> Urgente</label>
+  <label>Observação</label><textarea id="observacao" rows="2"></textarea>
+  <label>Prompt (o que você quer saber)</label>
+  <select id="prompt">
+    <option>Quais tickets esse cliente tem?</option>
+    <option>Resuma a situação financeira do cliente.</option>
+    <option>Responda a pergunta abaixo.</option>
+  </select>
+  <label>Texto do operador</label><textarea id="entrada" rows="3"></textarea>
+  <p><button id="enviar">Enviar</button> <button id="nova" type="button">Nova conversa</button></p>
+  <pre id="saida"></pre>
+<script>
+  const $ = id => document.getElementById(id);
+
+  // O token vale ~5 min; buscamos um novo a cada envio (barato, o Code.gs só assina).
+  function getConfig() {
+    return new Promise((ok, err) => google.script.run.withSuccessHandler(ok).withFailureHandler(err).getGatewayConfig());
+  }
+
+  // Conversa: o gateway devolve conversation_id na 1ª resposta (se o app tiver conversation.enabled no YAML);
+  // reenviamos nas próximas para o agente lembrar do contexto. "Nova conversa" apaga o id. O histórico em si fica no
+  // Databricks, não aqui.
+  let conversationId = null;
+  const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)).replace(/[^A-Za-z0-9_-]/g, '');
+  $('nova').onclick = () => { conversationId = null; $('saida').textContent = 'Nova conversa iniciada.'; };
+
+  async function enviar() {
+    $('saida').textContent = 'Consultando...';
+    $('enviar').disabled = true;  // evita duplo clique; o request_id abaixo também protege contra reenvio
+    const requestId = uuid();  // o MESMO id vale para tentativas automáticas desta ação (idempotência no gateway)
+    try {
+      const cfg = await getConfig();
+      // A identificação da aplicação NÃO vai no corpo: ela está no token assinado pelo Code.gs.
+      const body = {
+        request_id: requestId,
+        conversation_id: conversationId,
+        input: $('entrada').value,
+        prompt: $('prompt').value,
+        fields: { cpf: $('cpf').value, assunto: $('assunto').value, urgente: $('urgente').checked,
+                  observacao: $('observacao').value }
+      };
+      const r = await fetch(cfg.url + '/v1/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + cfg.token },
+        body: JSON.stringify(body)
+      });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) {
+        if (j.conversation_id) conversationId = j.conversation_id;
+        $('saida').textContent = (j.clarify ? '❓ ' : '') + j.text;  // clarify = o assistente fez uma pergunta de volta
+        return;
+      }
+      const wait = r.headers.get('Retry-After');
+      const ref = r.headers.get('X-Request-Id');  // peça este código ao suporte técnico se o erro persistir
+      $('saida').textContent = (r.status === 503 ? 'Serviço temporariamente indisponível' + (wait ? ' (tente em ' + wait + 's)' : '')
+                                : r.status === 429 ? 'Muitos atendimentos ao mesmo tempo' + (wait ? ' (tente em ' + wait + 's)' : '')
+                                : 'Erro ' + r.status) + (j.detail ? ': ' + (typeof j.detail === 'string' ? j.detail : 'dados inválidos') : '')
+                               + (ref ? '  [código ' + ref + ']' : '');
+    } catch (e) {
+      // Falha de rede/CORS/HTTPS/rede privada cai aqui: ver docs/CONFIGURACAO.md seção 5.
+      $('saida').textContent = 'Não consegui falar com o gateway: ' + e;
+    } finally {
+      $('enviar').disabled = false;
+    }
+  }
+  $('enviar').onclick = enviar;
+</script>
+</body>
+</html>
