@@ -262,7 +262,7 @@ def test_pacote_real_do_projeto_esta_limpo():
 
     files, skipped = collect(ROOT)
     assert scan(files, ROOT) == []  # nenhum segredo no código que seria levado
-    assert "databricks-token.txt" in skipped and "apps/demo.yaml" in skipped
+    assert "apps/demo.yaml" in skipped  # app de teste local nunca vai no pacote (independe de existir token/.env na pasta)
 
 
 # ---------- conversa no gateway ----------
